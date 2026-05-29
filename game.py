@@ -3,6 +3,7 @@ import sys
 
 # Инициализация Pygame
 pygame.init()
+pygame.mixer.init()
 
 # Настройки экрана
 CELL_SIZE = 16
@@ -27,9 +28,31 @@ room_smal = [
     [0, 0, 0, 0, 4, 0, 0, 2],
     [0, 4, 0, 0, 0, 0, 0, 3],
     [0, 4, 4, 0, 0, 0, 4, 1],
-    [3, 0, 0, 0, 0, 4, 4, 1],
+    [3, 0, 0, 0, 0, 4, 4, 2],
     [1, 0, 4, 0, 0, 4, 4, 1],
     [1, 1, 1, 3, 3, 3, 3, 1],
+]
+comnatca_room = [
+    [1, 3, 3, 3, 1, 1, 3, 1, 1, 1],
+    [4, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+    [4, 0, 0, 4, 0, 0, 4, 4, 0, 3],
+    [0, 0, 4, 4, 0, 0, 0, 4, 0, 3],
+    [0, 0, 0, 4, 0, 0, 0, 0, 0, 1],
+    [3, 3, 1, 1, 1, 1, 3, 3, 3, 1],
+]
+crainaya_room = [
+    [3, 3, 1, 1, 1, 3, 3, 3, 1],
+    [3, 0, 0, 0, 0, 0, 4, 0, 1],
+    [2, 0, 4, 4, 0, 0, 0, 0, 3],
+    [1, 0, 4, 0, 0, 0, 4, 4, 3],
+    [1, 0, 0, 4, 0, 0, 4, 4, 1],
+    [3, 3, 3, 1, 1, 1, 1, 3, 1],
+]
+spusk_vniz = [
+    [0, 0, 0],
+    [0, 5, 0],
+    [0, 0, 0],
+    [1, 1, 1],
 ]
 corridor_odin = [
     [3, 1],
@@ -55,6 +78,17 @@ corridor_vniz = [
     [1, 4, 1],
     [3, 3, 1],
 ]
+corridor_verh = [
+    [1, 4, 3],
+    [3, 4, 1],
+    [3, 0, 3],
+    [1, 0, 3],
+    [1, 0, 1],
+    [1, 4, 1],
+    [3, 4, 3],
+    [0, 0, 1],
+    [1, 3, 1],
+]
 
 # Цвета
 WHITE = (255, 255, 255)
@@ -78,6 +112,18 @@ corridor_dlin_y = len(room_map) * CELL_SIZE
 corridor_vniz_x = len(room_map[0]) * CELL_SIZE
 corridor_vniz_y = len(room_map) * CELL_SIZE + 112
 
+comnatca_room_x = len(room_map[0]) * CELL_SIZE + 48
+comnatca_room_y = len(room_map) * CELL_SIZE + 144
+
+corridor_verh_x = len(room_map[0]) * CELL_SIZE + 208
+corridor_verh_y = len(room_map) * CELL_SIZE + 48
+
+crainaya_room_x = len(room_map[0]) * CELL_SIZE + 304
+crainaya_room_y = len(room_map) * CELL_SIZE - 16
+
+spusk_vniz_x = len(room_map[0]) * CELL_SIZE + 160
+spusk_vniz_y = len(room_map) * CELL_SIZE + 48
+
 #ОТРИСОВКА КОМНАТ
 room = [
     (room_map, 0, 112),
@@ -85,8 +131,17 @@ room = [
     (corridor_odin, corridor_odin_x, corridor_odin_y),
     (corridor_dlin, corridor_dlin_x, corridor_dlin_y),
     (corridor_vniz, corridor_vniz_x, corridor_vniz_y),
+    (comnatca_room, comnatca_room_x, comnatca_room_y),
+    (corridor_verh, corridor_verh_x, corridor_verh_y),
+    (crainaya_room, crainaya_room_x, crainaya_room_y),
+    (spusk_vniz, spusk_vniz_x, spusk_vniz_y),
 ]
 
+#ОТРИСОВКА МОНСТРОВ
+monsters = [
+    (300, 400),
+    (400, 300),
+]
 
 '''
 sprite = pygame.image.load(...): Загружает изображение спрайта.
@@ -102,6 +157,7 @@ staraya_stena = pygame.image.load('Dungeon_of_Death/New_Sprait/Stena_Dang/Stoun_
 
 sprite_fon = pygame.image.load('Dungeon_of_Death/New_Sprait/Pol_Dang/Pol_Level_1.png')
 zamshelii_pol = pygame.image.load('Dungeon_of_Death/New_Sprait/Pol_Dang/Pol_Level_1_Zamshelii.png')
+luk_new_level = pygame.image.load('Dungeon_of_Death/New_Sprait/Pol_Dang/luk-level.png')
 
 # Декорации
 
@@ -111,6 +167,21 @@ slizen = pygame.image.load('Dungeon_of_Death/New_Sprait/Vragi/Slizen_stoit.png')
 
 # Оружие
 
+
+#Что-то
+enemy = {
+    "x": 10 * CELL_SIZE,
+    "y": 10 * CELL_SIZE,
+    "sprite": slizen,
+    "vidimost": 4
+}
+
+#Музыка и эмбиент загрузка
+ambient_song = pygame.mixer.music.load('Dungeon_of_Death/Ambient/ambient.mp3')
+
+#воспроизведение
+pygame.mixer.music.play(-1)
+pygame.mixer.music.set_volume(0.3)
 
 # Функция для выравнивания позиции к центру клетки
 def align_to_grid(pos_x, pos_y, cell_size):
@@ -131,6 +202,8 @@ def align_to_grid(pos_x, pos_y, cell_size):
 '''
 player_size = CELL_SIZE
 player_x, player_y = align_to_grid(1 * CELL_SIZE, 8 * CELL_SIZE, CELL_SIZE)
+#sliz_x, sliz_y = align_to_grid(19 * CELL_SIZE, 10 * CELL_SIZE, CELL_SIZE)
+enemy["x"], enemy["y"] = align_to_grid(19 * CELL_SIZE, 10 * CELL_SIZE, CELL_SIZE)
 
 # Статичный объект (в заданной позиции в игровом мире)
 static_object_world_x = 100
@@ -182,6 +255,9 @@ while running:
                     walls_rect.append(rect)
                 elif cell == 4:
                     screen.blit(zamshelii_pol, rect)
+                elif cell == 5:
+                    screen.blit(luk_new_level, rect)
+                    walls_rect.append(rect)
                 else:
                 # Если в матрице 0 — рисуем белый блок (пустоту)
                     screen.blit(sprite_fon, rect)
@@ -226,8 +302,68 @@ while running:
         if direction == pygame.K_UP:
             potential_player_y -= CELL_SIZE
 
+        old_x, old_y = enemy["x"], enemy["y"]
+
+        enemy_cell_x = enemy["x"] // CELL_SIZE
+        enemy_cell_y = enemy["y"] // CELL_SIZE
+        player_cell_x = player_x // CELL_SIZE
+        player_cell_y = player_y // CELL_SIZE
+        distance = max(abs(enemy_cell_x - player_cell_x),
+                       abs(enemy_cell_y - player_cell_y))
+        
+        moved = False
+        if distance <= enemy["vidimost"]:
+            #преследование
+            if enemy["x"] < player_x:
+                enemy["x"] += CELL_SIZE
+                moved = True
+            elif enemy["x"] > player_x:
+                enemy["x"] -= CELL_SIZE
+                moved = True
+
+            if enemy["y"] < player_y:
+                enemy["y"] += CELL_SIZE
+                moved = True
+            elif enemy["y"] > player_y:
+                enemy["y"] -= CELL_SIZE
+                moved = True
+        else:
+            #случайное движение
+            import random
+            r = random.randint(0, 3)
+            if r == 0:
+                enemy["x"] += CELL_SIZE
+            elif r == 1:
+                enemy["x"] -= CELL_SIZE
+            elif r == 2:
+                enemy["y"] += CELL_SIZE
+            elif r == 3:
+                enemy["y"] -= CELL_SIZE
+            moved = True
+
         # Начало изменений для проверки столкновений
         should_move = True
+
+        #Проверка стен
+        if moved:
+            enemy_rect = pygame.Rect(
+                enemy["x"] - CELL_SIZE // 2,
+                enemy["y"] - CELL_SIZE // 2,
+                CELL_SIZE,
+                CELL_SIZE
+            )
+            collision = False
+            for wall in walls_rect:
+                if enemy_rect.colliderect(wall.inflate(-2, -2)):
+                    collision = True
+                    break
+
+            if collision:
+                enemy["x"], enemy["y"] = old_x, old_y
+            
+            #Проверка столкновения с игроком
+            # if abs(enemy["x"] - player_x) < CELL_SIZE and abs(enemy["y"] - player_y) < CELL_SIZE:
+            #     player_hp -= 10
 
         # Проверяем, находится ли потенциальная позиция игрока на клетке с красным кубом
         '''
@@ -287,6 +423,9 @@ while running:
     screen.blit(...): Рисует игрока на экране.
     '''
     screen.blit(player_sprite, (player_x - CELL_SIZE // 2, player_y - CELL_SIZE // 2))
+
+    #Отрисовка монстров
+    screen.blit(enemy["sprite"], (enemy["x"] - CELL_SIZE // 2, enemy["y"] - CELL_SIZE // 2))
 
     # Рисуем сетку
     '''

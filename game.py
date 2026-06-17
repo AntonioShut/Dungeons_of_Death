@@ -8,8 +8,13 @@ pygame.mixer.init()
 # Настройки экрана
 CELL_SIZE = 16
 WIDTH, HEIGHT = 800, 800
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+SCREEN_WIDTH, SCREEN_HEIGHT = pygame.display.Info().current_w, pygame.display.Info().current_h
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN)
+fullscreen = False
 pygame.display.set_caption("Dungeon of Death_Pre-Alpha")
+
+game_surface = pygame.Surface((WIDTH, HEIGHT))
+
 '''
 1 - стена
 0 - пустота
@@ -168,14 +173,6 @@ slizen = pygame.image.load('Dungeon_of_Death/New_Sprait/Vragi/Slizen_stoit.png')
 # Оружие
 
 
-#Что-то
-enemy = {
-    "x": 10 * CELL_SIZE,
-    "y": 10 * CELL_SIZE,
-    "sprite": slizen,
-    "vidimost": 4
-}
-
 #Музыка и эмбиент загрузка
 ambient_song = pygame.mixer.music.load('Dungeon_of_Death/Ambient/ambient.mp3')
 
@@ -202,8 +199,17 @@ def align_to_grid(pos_x, pos_y, cell_size):
 '''
 player_size = CELL_SIZE
 player_x, player_y = align_to_grid(1 * CELL_SIZE, 8 * CELL_SIZE, CELL_SIZE)
-#sliz_x, sliz_y = align_to_grid(19 * CELL_SIZE, 10 * CELL_SIZE, CELL_SIZE)
-enemy["x"], enemy["y"] = align_to_grid(19 * CELL_SIZE, 10 * CELL_SIZE, CELL_SIZE)
+
+sliz_x, sliz_y = align_to_grid(19 * CELL_SIZE, 10 * CELL_SIZE, CELL_SIZE)
+sliz1_x, sliz1_y = align_to_grid(18 * CELL_SIZE, 19 * CELL_SIZE, CELL_SIZE)
+sliz2_x, sliz2_y = align_to_grid(35 * CELL_SIZE, 8 * CELL_SIZE, CELL_SIZE)
+
+#Для монстров
+enemy = [
+    {"x": sliz_x, "y": sliz_y, "sprite": slizen, "vidimost": 4},
+    {"x": sliz1_x, "y": sliz1_y, "sprite": slizen, "vidimost": 4},
+    {"x": sliz2_x, "y": sliz2_y, "sprite": slizen, "vidimost": 4},
+]
 
 # Статичный объект (в заданной позиции в игровом мире)
 static_object_world_x = 100
@@ -246,21 +252,21 @@ while running:
 
                 if cell == 1:
                 # Если в матрице 1 — рисуем красный блок
-                    screen.blit(obiekt_sprite, rect)
+                    game_surface.blit(obiekt_sprite, rect)
                     walls_rect.append(rect) #для столкновений
                 elif cell == 2:
-                    screen.blit(sprite_dver, rect)
+                    game_surface.blit(sprite_dver, rect)
                 elif cell == 3:
-                    screen.blit(staraya_stena, rect)
+                    game_surface.blit(staraya_stena, rect)
                     walls_rect.append(rect)
                 elif cell == 4:
-                    screen.blit(zamshelii_pol, rect)
+                    game_surface.blit(zamshelii_pol, rect)
                 elif cell == 5:
-                    screen.blit(luk_new_level, rect)
+                    game_surface.blit(luk_new_level, rect)
                     walls_rect.append(rect)
                 else:
                 # Если в матрице 0 — рисуем белый блок (пустоту)
-                    screen.blit(sprite_fon, rect)
+                    game_surface.blit(sprite_fon, rect)
 
     # Обработка событий
     '''
@@ -273,6 +279,21 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key in [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN]:
                 direction = event.key
+
+    if event.type == pygame.KEYDOWN:
+        if event.key == pygame.K_F11:
+            fullscreen = not fullscreen
+            if fullscreen:
+                screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN)
+            else:
+                screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+                SCREEN_WIDTH, SCREEN_HEIGHT = screen.get_size()
+        if event.key == pygame.K_ESCAPE:
+            if fullscreen:
+                fullscreen = False
+                screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+                SCREEN_WIDTH, SCREEN_HEIGHT = screen.get_size()
+    
 
     # Проверка на таймер перемещения
     '''
@@ -290,6 +311,8 @@ while running:
         Условия if direction == pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP:
         Определяют изменение координат игрока в зависимости от нажатой клавиши.
         '''
+        old_player_x, old_player_y = player_x, player_y
+
         potential_player_x = player_x
         potential_player_y = player_y
 
@@ -302,64 +325,86 @@ while running:
         if direction == pygame.K_UP:
             potential_player_y -= CELL_SIZE
 
-        old_x, old_y = enemy["x"], enemy["y"]
+        for one_enemy in enemy:
+            old_x, old_y = one_enemy["x"], one_enemy["y"]
 
-        enemy_cell_x = enemy["x"] // CELL_SIZE
-        enemy_cell_y = enemy["y"] // CELL_SIZE
-        player_cell_x = player_x // CELL_SIZE
-        player_cell_y = player_y // CELL_SIZE
-        distance = max(abs(enemy_cell_x - player_cell_x),
-                       abs(enemy_cell_y - player_cell_y))
+            enemy_cell_x = one_enemy["x"] // CELL_SIZE
+            enemy_cell_y = one_enemy["y"] // CELL_SIZE
+            player_cell_x = player_x // CELL_SIZE
+            player_cell_y = player_y // CELL_SIZE
+            distance = max(abs(enemy_cell_x - player_cell_x),
+                            abs(enemy_cell_y - player_cell_y))
         
-        moved = False
-        if distance <= enemy["vidimost"]:
-            #преследование
-            if enemy["x"] < player_x:
-                enemy["x"] += CELL_SIZE
-                moved = True
-            elif enemy["x"] > player_x:
-                enemy["x"] -= CELL_SIZE
+            moved = False
+            if distance <= one_enemy["vidimost"]:
+                #преследование
+                if one_enemy["x"] < player_x:
+                    one_enemy["x"] += CELL_SIZE
+                    moved = True
+                elif one_enemy["x"] > player_x:
+                    one_enemy["x"] -= CELL_SIZE
+                    moved = True
+
+                if one_enemy["y"] < player_y:
+                    one_enemy["y"] += CELL_SIZE
+                    moved = True
+                elif one_enemy["y"] > player_y:
+                    one_enemy["y"] -= CELL_SIZE
+                    moved = True
+            else:
+                #случайное движение
+                import random
+                r = random.randint(0, 3)
+                if r == 0:
+                    one_enemy["x"] += CELL_SIZE
+                elif r == 1:
+                    one_enemy["x"] -= CELL_SIZE
+                elif r == 2:
+                    one_enemy["y"] += CELL_SIZE
+                elif r == 3:
+                    one_enemy["y"] -= CELL_SIZE
                 moved = True
 
-            if enemy["y"] < player_y:
-                enemy["y"] += CELL_SIZE
-                moved = True
-            elif enemy["y"] > player_y:
-                enemy["y"] -= CELL_SIZE
-                moved = True
-        else:
-            #случайное движение
-            import random
-            r = random.randint(0, 3)
-            if r == 0:
-                enemy["x"] += CELL_SIZE
-            elif r == 1:
-                enemy["x"] -= CELL_SIZE
-            elif r == 2:
-                enemy["y"] += CELL_SIZE
-            elif r == 3:
-                enemy["y"] -= CELL_SIZE
-            moved = True
+            # Начало изменений для проверки столкновений
+            should_move = True
 
-        # Начало изменений для проверки столкновений
-        should_move = True
+            #Проверка стен
+            if moved:
+                enemy_rect = pygame.Rect(
+                    one_enemy["x"] - CELL_SIZE // 2,
+                    one_enemy["y"] - CELL_SIZE // 2,
+                    CELL_SIZE,
+                    CELL_SIZE
+                )
+                collision = False
+                for wall in walls_rect:
+                    if enemy_rect.colliderect(wall.inflate(-2, -2)):
+                        collision = True
+                        break
 
-        #Проверка стен
-        if moved:
-            enemy_rect = pygame.Rect(
-                enemy["x"] - CELL_SIZE // 2,
-                enemy["y"] - CELL_SIZE // 2,
-                CELL_SIZE,
-                CELL_SIZE
-            )
-            collision = False
-            for wall in walls_rect:
-                if enemy_rect.colliderect(wall.inflate(-2, -2)):
-                    collision = True
-                    break
+                if collision:
+                    one_enemy["x"], one_enemy["y"] = old_x, old_y
 
-            if collision:
-                enemy["x"], enemy["y"] = old_x, old_y
+                # Проверка столкновений с другими монстрами
+                for other in enemy:
+                    if other != one_enemy and other["x"] == one_enemy["x"] and other["y"] == one_enemy["y"]:
+                        one_enemy["x"], one_enemy["y"] = old_x, old_y
+                        break
+
+                # Проверка столкновения с игроком (новая логика)
+                next_x = one_enemy["x"]
+                next_y = one_enemy["y"]
+
+                # Определяем, куда монстр пытался пойти
+                if one_enemy["x"] != old_x:
+                    next_x = old_x + (1 if one_enemy["x"] > old_x else -1)
+                if one_enemy["y"] != old_y:
+                    next_y = old_y + (1 if one_enemy["y"] > old_y else -1)
+
+                # Если в следующей клетке игрок - откатываем монстра обратно
+                if next_x == player_x and next_y == player_y:
+                    one_enemy["x"] = old_x
+                    one_enemy["y"] = old_y
             
             #Проверка столкновения с игроком
             # if abs(enemy["x"] - player_x) < CELL_SIZE and abs(enemy["y"] - player_y) < CELL_SIZE:
@@ -422,10 +467,11 @@ while running:
     '''
     screen.blit(...): Рисует игрока на экране.
     '''
-    screen.blit(player_sprite, (player_x - CELL_SIZE // 2, player_y - CELL_SIZE // 2))
+    game_surface.blit(player_sprite, (player_x - CELL_SIZE // 2, player_y - CELL_SIZE // 2))
 
     #Отрисовка монстров
-    screen.blit(enemy["sprite"], (enemy["x"] - CELL_SIZE // 2, enemy["y"] - CELL_SIZE // 2))
+    for one_enemy in enemy:
+        game_surface.blit(one_enemy["sprite"], (one_enemy["x"] - CELL_SIZE // 2, one_enemy["y"] - CELL_SIZE // 2))
 
     # Рисуем сетку
     '''
@@ -436,9 +482,18 @@ while running:
     CELL_SIZE определяет расстояние между линиями.
     '''
     for x in range(0, WIDTH + 1, CELL_SIZE):
-        pygame.draw.line(screen, WHITE, (x, 0), (x, HEIGHT))
+        pygame.draw.line(game_surface, WHITE, (x, 0), (x, HEIGHT))
     for y in range(0, HEIGHT + 1, CELL_SIZE):
-        pygame.draw.line(screen, WHITE, (0, y), (WIDTH, y))
+        pygame.draw.line(game_surface, WHITE, (0, y), (WIDTH, y))
+
+    #Скреен
+    #scaled_surface = pygame.transform.scale(game_surface, (SCREEN_WIDTH, SCREEN_HEIGHT), screen)
+    scale = min(SCREEN_WIDTH / WIDTH, SCREEN_HEIGHT / HEIGHT)
+    new_width = int(WIDTH * scale)
+    new_height = int(HEIGHT * scale)
+    scaled_surface = pygame.transform.scale(game_surface, (new_width, new_height))
+    x_offset = (SCREEN_WIDTH - new_width) // 2
+    y_offset = (SCREEN_HEIGHT - new_height) // 2
 
     # Ограничение движения камеры по границам карты
 #    map_width = 10000
@@ -447,9 +502,246 @@ while running:
 #    camera_x = max(0, min(camera_x, map_width - WIDTH))
 #    camera_y = max(0, min(camera_y, map_height - HEIGHT))
 
+    # ==========ИНВЕНТАРЬ==========
+    inv_x = x_offset + new_width + 20
+    inv_y = y_offset + 20
+    inv_width = 280
+    slot_size = 42
+    slot_gap = 5
+
+    # Экипировка
+    equip_rect = pygame.Rect(inv_x, inv_y, inv_width, 210)
+    pygame.draw.rect(screen, (40, 40, 50), equip_rect)
+    pygame.draw.rect(screen, WHITE, equip_rect, 2)
+
+    # Заголовок
+    font_small = pygame.font.Font(None, 16)
+    title = font_small.render("ЭКИПИРОВКА", True, (200, 200, 150))
+    screen.blit(title, (inv_x + 10, inv_y + 3))
+
+    # Броня (5 слотов)
+    armor_slots = [
+        ("Шлем", 0),
+        ("Нагрудник", 1),
+        ("Поножи", 2),
+        ("Ботинки", 3),
+        ("Перчатки", 4)
+    ]
+
+    for i, (name, _) in enumerate(armor_slots):
+        slot_x = inv_x + 10 + i * (slot_size + slot_gap)
+        slot_y = inv_y + 25
+        slot_rect = pygame.Rect(slot_x, slot_y, slot_size, slot_size)
+        pygame.draw.rect(screen, (60, 60, 70), slot_rect)
+        pygame.draw.rect(screen, (150, 150, 150), slot_rect, 1)
+        
+        # Название под слотом
+        name_text = font_small.render(name[:3], True, (180, 180, 180))
+        screen.blit(name_text, (slot_x + 2, slot_y + slot_size + 2))
+
+    # Оружие (5 слотов)
+    weapon_slots = [
+        ("Меч", 0),
+        ("Посох", 1),
+        ("Топор", 2),
+        ("Лук", 3),
+        ("Щит", 4)
+    ]
+
+    for i, (name, _) in enumerate(weapon_slots):
+        slot_x = inv_x + 10 + i * (slot_size + slot_gap)
+        slot_y = inv_y + 95
+        slot_rect = pygame.Rect(slot_x, slot_y, slot_size, slot_size)
+        pygame.draw.rect(screen, (60, 60, 70), slot_rect)
+        pygame.draw.rect(screen, (150, 150, 150), slot_rect, 1)
+        
+        name_text = font_small.render(name[:3], True, (180, 180, 180))
+        screen.blit(name_text, (slot_x + 2, slot_y + slot_size + 2))
+
+    # Аксессуары (5 слотов)
+    accessory_slots = [
+        ("Амулет", 0),
+        ("Кольцо", 1),
+        ("Кольцо", 2),
+        ("Кольцо", 3),
+        ("Артеф", 4)
+    ]
+
+    for i, (name, _) in enumerate(accessory_slots):
+        slot_x = inv_x + 10 + i * (slot_size + slot_gap)
+        slot_y = inv_y + 165
+        slot_rect = pygame.Rect(slot_x, slot_y, slot_size, slot_size)
+        pygame.draw.rect(screen, (60, 60, 70), slot_rect)
+        pygame.draw.rect(screen, (150, 150, 150), slot_rect, 1)
+        
+        name_text = font_small.render(name[:4], True, (180, 180, 180))
+        screen.blit(name_text, (slot_x + 2, slot_y + slot_size + 2))
+
+    # инвентарь
+    inv_bottom_y = inv_y + 230
+    inv_bottom_rect = pygame.Rect(inv_x, inv_bottom_y, inv_width, 250)
+    pygame.draw.rect(screen, (35, 35, 45), inv_bottom_rect)
+    pygame.draw.rect(screen, WHITE, inv_bottom_rect, 2)
+
+    # Заголовок
+    inv_title = font_small.render("ИНВЕНТАРЬ", True, (200, 200, 150))
+    screen.blit(inv_title, (inv_x + 10, inv_bottom_y + 3))
+
+    # Сетка инвентаря 5x4 (5 колонок, 4 строки = 20 слотов)
+    inv_rows = 4
+    inv_cols = 5
+
+    for row in range(inv_rows):
+        for col in range(inv_cols):
+            slot_x = inv_x + 10 + col * (slot_size + slot_gap)
+            slot_y = inv_bottom_y + 25 + row * (slot_size + slot_gap + 5)
+            slot_rect = pygame.Rect(slot_x, slot_y, slot_size, slot_size)
+            pygame.draw.rect(screen, (50, 50, 60), slot_rect)
+            pygame.draw.rect(screen, (100, 100, 110), slot_rect, 1)
+            
+            # Пример пустых слотов (можно потом заполнить предметами)
+            # empty_text = font_small.render("--", True, (80, 80, 80))
+            # screen.blit(empty_text, (slot_x + 12, slot_y + 12))
+
+        # кнопка для теста (опционально)
+        # test_btn = pygame.Rect(inv_x + 50, inv_bottom_y + 175, 120, 20)
+        # pygame.draw.rect(screen, (80, 60, 80), test_btn)
+        # pygame.draw.rect(screen, (200, 150, 200), test_btn, 1)
+        # test_text = font_small.render("Тест: добавить предмет", True, (200, 180, 200))
+        # screen.blit(test_text, (test_btn.x + 5, test_btn.y + 3))
+
+    # ====ИНТЕРФЕЙС ИГРОКА======
+    panel_x = x_offset - 220  # левее игры на 220 пикселей
+    panel_y = y_offset + 20
+    panel_width = 200
+    panel_height = SCREEN_HEIGHT - 40  # почти на весь экран
+
+    # Фон панели
+    pygame.draw.rect(screen, (30, 30, 40), (panel_x, panel_y, panel_width, panel_height))
+    pygame.draw.rect(screen, WHITE, (panel_x, panel_y, panel_width, panel_height), 2)
+
+    # Шрифты
+    font_small = pygame.font.Font(None, 18)
+    font_medium = pygame.font.Font(None, 22)
+    font_large = pygame.font.Font(None, 28)
+
+    y_offset_panel = panel_y + 10
+
+    # 1. Спрайт лица (временный круг)
+    face_rect = pygame.Rect(panel_x + 10, y_offset_panel, 60, 60)
+    pygame.draw.circle(screen, (200, 180, 100), face_rect.center, 30)  # жёлтое лицо
+    pygame.draw.circle(screen, WHITE, face_rect.center, 30, 2)
+    # Глаза
+    pygame.draw.circle(screen, (0, 0, 0), (face_rect.centerx - 10, face_rect.centery - 5), 4)
+    pygame.draw.circle(screen, (0, 0, 0), (face_rect.centerx + 10, face_rect.centery - 5), 4)
+    # Улыбка
+    pygame.draw.arc(screen, (0, 0, 0), (face_rect.centerx - 10, face_rect.centery - 5, 20, 15), 0, 3.14, 2)
+
+    # Имя рядом со спрайтом
+    name_text = font_large.render("Никки", True, (255, 220, 150))
+    screen.blit(name_text, (face_rect.right + 10, face_rect.y + 15))
+
+    # Уровень
+    lvl_text = font_medium.render("Уровень 1", True, (200, 200, 200))
+    screen.blit(lvl_text, (face_rect.right + 10, face_rect.y + 40))
+
+    y_offset_panel += 75
+
+    # 2. Полоски здоровья и маны
+    # Здоровье
+    hp_percent = 100  # 100 из 100
+    hp_width = int(170 * hp_percent / 100)
+    pygame.draw.rect(screen, (60, 0, 0), (panel_x + 10, y_offset_panel, 170, 18))
+    pygame.draw.rect(screen, (200, 0, 0), (panel_x + 10, y_offset_panel, hp_width, 18))
+    pygame.draw.rect(screen, WHITE, (panel_x + 10, y_offset_panel, 170, 18), 1)
+    hp_text = font_small.render("Здоровье 100/100", True, WHITE)
+    screen.blit(hp_text, (panel_x + 15, y_offset_panel + 2))
+
+    y_offset_panel += 22
+
+    # Мана
+    mp_percent = 100
+    mp_width = int(170 * mp_percent / 100)
+    pygame.draw.rect(screen, (0, 0, 60), (panel_x + 10, y_offset_panel, 170, 18))
+    pygame.draw.rect(screen, (0, 100, 200), (panel_x + 10, y_offset_panel, mp_width, 18))
+    pygame.draw.rect(screen, WHITE, (panel_x + 10, y_offset_panel, 170, 18), 1)
+    mp_text = font_small.render("Мана 100/100", True, WHITE)
+    screen.blit(mp_text, (panel_x + 15, y_offset_panel + 2))
+
+    y_offset_panel += 30
+
+    # 3. эффекты (2 пустых строчки)
+    effect_title = font_small.render("Эффекты:", True, (150, 150, 200))
+    screen.blit(effect_title, (panel_x + 10, y_offset_panel))
+    y_offset_panel += 18
+    effect1 = font_small.render("- Нет", True, (100, 100, 100))
+    screen.blit(effect1, (panel_x + 10, y_offset_panel))
+    y_offset_panel += 16
+    effect2 = font_small.render("- Нет", True, (100, 100, 100))
+    screen.blit(effect2, (panel_x + 10, y_offset_panel))
+
+    y_offset_panel += 25
+
+    # 4. характеристики (качаемые)
+    stats_title = font_medium.render("Характеристики:", True, (200, 200, 100))
+    screen.blit(stats_title, (panel_x + 10, y_offset_panel))
+    y_offset_panel += 22
+
+    stats = [
+    ("Магия", 5),
+    ("Сила", 3),
+    ("Ловкость", 4),
+    ("Тьма", 2)
+    ]
+
+    for stat_name, stat_value in stats:
+        stat_text = font_small.render(f"{stat_name}: {stat_value}", True, (200, 200, 200))
+        screen.blit(stat_text, (panel_x + 15, y_offset_panel))
+        # Маленькая кнопка "+"
+        plus_rect = pygame.Rect(panel_x + 160, y_offset_panel - 2, 18, 18)
+        pygame.draw.rect(screen, (80, 80, 100), plus_rect)
+        pygame.draw.rect(screen, WHITE, plus_rect, 1)
+        plus_text = font_small.render("+", True, (200, 200, 100))
+        screen.blit(plus_text, (plus_rect.x + 5, plus_rect.y - 1))
+        y_offset_panel += 18
+
+    y_offset_panel += 10
+
+    # 5. магия (2 заклинания)
+    spells_title = font_medium.render("Магия:", True, (150, 150, 200))
+    screen.blit(spells_title, (panel_x + 10, y_offset_panel))
+    y_offset_panel += 22
+
+    spells = [
+    ("Теневой удар", "15 маны"),
+    ("Теневой щит", "20 маны")
+    ]
+
+    for spell_name, spell_cost in spells:
+        spell_text = font_small.render(f"{spell_name} [{spell_cost}]", True, (180, 150, 220))
+        screen.blit(spell_text, (panel_x + 15, y_offset_panel))
+        y_offset_panel += 18
+
+    y_offset_panel += 15
+
+    # 6. LOG (журнал событий)
+    log_title = font_medium.render("Журнал событий:", True, (200, 180, 100))
+    screen.blit(log_title, (panel_x + 10, y_offset_panel))
+    y_offset_panel += 22
+
+    # Рамка для лога
+    log_rect = pygame.Rect(panel_x + 10, y_offset_panel, 180, 60)
+    pygame.draw.rect(screen, (20, 20, 30), log_rect)
+    pygame.draw.rect(screen, (100, 100, 120), log_rect, 1)
+
+    log_text = font_small.render("В разработке Log", True, (150, 150, 150))
+    screen.blit(log_text, (log_rect.x + 10, log_rect.y + 22))
+
     # Обновление экрана
     pygame.display.update()
-    screen.fill(BLACK)
+
+    game_surface.fill(BLACK)
+    screen.blit(scaled_surface, (x_offset, y_offset))
     
     # Контроль FPS
     clock.tick(60)
